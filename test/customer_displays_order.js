@@ -3,6 +3,10 @@ const sinon = require('sinon');
 const orderSystemWith = require('../lib/orders');
 
 const expect = chai.expect;
+chai.use(require("chai-as-promised"));
+
+const promiseFor = value => new Promise(resolve => setTimeout(resolve(value), 100));
+const failingPromisewith = error => new Promise((resolve, reject) => setTimeout(reject(error), 100));
 
 describe('Customer displays order', () => {
   beforeEach(function () {
@@ -12,34 +16,33 @@ describe('Customer displays order', () => {
     this.orderSystem = orderSystemWith(this.orderDAO);
   });
   context('Given that the order is empty', function () {
-    let result;
+    let orderId;
     beforeEach(function () {
-      this.orderId = 'some empty order id';
+      orderId = 'some empty order id';
       this.orderDAO.byId
-        .withArgs(this.orderId)
-        .callsArgWithAsync(1, null, []);
-
-      return this.orderSystem.display(this.orderId)
-        .then((res) => {
-          result = res;
-        });
-
+        .withArgs(orderId)
+        .returns(promiseFor([]));
+      //.callsArgWithAsync(1, null, []);
+      this.result = this.orderSystem.display(orderId);
     });
     it('will show no order items', function () {
-      expect(result).to.have.property('items').that.is.empty;
+      return expect(this.result).to.eventually
+        .have.property('items').that.is.empty;
     });
     it('will show 0 as the total price', function () {
-      expect(result).to.have.property('totalPrice').that.is.equal(0);
+      return expect(this.result).to.eventually
+        .have.property('totalPrice').that.is.equal(0);
     });
     it('will only be possible to add a beverage', function () {
-      expect(result).to.have.property('actions').that.is.deep.equal([{
-        action: 'append-beverage',
-        target: this.orderId,
-        parameters: {
-          beverageRef: null,
-          quantity: 0
-        }
-      }]);
+      return expect(this.result).to.eventually
+        .have.property('actions').that.is.deep.equal([{
+          action: 'append-beverage',
+          target: orderId,
+          parameters: {
+            beverageRef: null,
+            quantity: 0
+          }
+        }]);
     });
   });
 
